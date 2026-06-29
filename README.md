@@ -6,6 +6,9 @@ Lean sizing pipeline for a hypersonic orbital reentry vehicle. Marimo notebooks 
 
 ```bash
 cd thor_notebook
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -U -r requirements.txt
 pip install -e .
 ```
 

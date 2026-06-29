@@ -1,8 +1,17 @@
 # /// script
-# requires-python = ">=3.14"
+# requires-python = ">=3.11"
 # dependencies = [
-#     "marimo>=0.23.3",
+#     "marimo>=0.9.0",
+#     "polars",
+#     "matplotlib",
+#     "numpy",
+#     "pydantic>=2",
+#     "duckdb",
+#     "thor-notebook",
 # ]
+#
+# [tool.uv.sources]
+# thor-notebook = { path = "..", editable = true }
 # ///
 """00 — Mission CONOPS: fases, eventos, requisitos top-level → MissionSpec."""
 

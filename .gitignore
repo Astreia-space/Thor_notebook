@@ -8,3 +8,6 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+
+# Marimo session cache
+notebooks/__marimo__/

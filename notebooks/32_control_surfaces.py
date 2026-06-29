@@ -1,3 +1,18 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "marimo>=0.9.0",
+#     "polars",
+#     "matplotlib",
+#     "numpy",
+#     "pydantic>=2",
+#     "duckdb",
+#     "thor-notebook",
+# ]
+#
+# [tool.uv.sources]
+# thor-notebook = { path = "..", editable = true }
+# ///
 """32 — Control surfaces: body flap / RCS authority."""
 
 import marimo

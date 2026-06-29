@@ -1,0 +1,7 @@
+-e .
+marimo
+polars
+matplotlib
+numpy
+pydantic>=2
+duckdb

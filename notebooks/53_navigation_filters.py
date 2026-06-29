@@ -1,3 +1,18 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "marimo>=0.9.0",
+#     "polars",
+#     "matplotlib",
+#     "numpy",
+#     "pydantic>=2",
+#     "duckdb",
+#     "thor-notebook",
+# ]
+#
+# [tool.uv.sources]
+# thor-notebook = { path = "..", editable = true }
+# ///
 """53 — Navigation filters: IMU, EKF/UKF."""
 
 import marimo
