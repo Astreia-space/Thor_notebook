@@ -1,0 +1,10 @@
+# THOR pipeline artifacts
+data/
+*.duckdb
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
