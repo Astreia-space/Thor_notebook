@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """60 — Loads environments: launch, reentry, docking, landing."""
 
 import marimo
@@ -26,30 +11,32 @@ def _():
     import marimo as mo
     import polars as pl
 
-    from thor.io.handoff import load_table, save_table
-    return load_table, mo, pl, save_table
+    from thor.io.handoff import load_state, load_table, save_table
+    from thor.io.inputs import num
+    return load_state, load_table, mo, num, pl, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 6 — Loads Environments")
+    mo.md("# Camada 6 — Loads Environments\n\nInputs: `loads` + derived reentry/docking")
     return
 
 
 @app.cell
-def _(load_table, pl):
+def _(load_state, load_table, num):
+    state = load_state()
     traj = load_table("entry_trajectory")
-    g_peak = float(traj["g_load"].max()) if traj is not None else 4.0
-    docking = load_table("docking_approach")
-    f_dock = 175 if docking is None else 3500 * 0.05
+    g_peak = float(traj["g_load"].max()) if traj is not None else num("mission", "max_g_load")
+    m_dock = state.mass.wet_mass_kg or state.mass.dry_mass_kg or 3500
+    f_dock = m_dock * num("docking", "contact_accel_m_s2")
     df = pl.DataFrame(
         {
             "case": ["Launch quasi-static", "Launch acoustic", "Reentry", "Docking", "Landing"],
-            "load": [6.0, 140, g_peak, f_dock, 8.0],
+            "load": [num("loads", "launch_g"), num("loads", "acoustic_OASPL"), g_peak, f_dock, num("loads", "landing_g")],
             "unit": ["g", "dB OASPL", "g", "N", "g"],
         }
     )
-    return df, docking, f_dock, g_peak, traj
+    return df, f_dock, g_peak, m_dock, state, traj
 
 
 @app.cell

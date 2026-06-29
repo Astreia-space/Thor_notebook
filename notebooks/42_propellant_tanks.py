@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """42 — Propellant tanks: volume, pressão, blowdown."""
 
 import marimo
@@ -27,23 +12,25 @@ def _():
     import polars as pl
 
     from thor.io.handoff import load_state, save_state, save_table
-    return load_state, mo, pl, save_state, save_table
+    from thor.io.inputs import num
+    return load_state, mo, num, pl, save_state, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 4 — Propellant Tanks")
+    mo.md("# Camada 4 — Propellant Tanks\n\nInputs: `propulsion` section in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(load_state):
+def _(load_state, num):
     state = load_state()
     mp = state.mass.propellant_kg or 600
-    rho_prop = 1100  # kg/m³ storable
-    volume_m3 = mp / rho_prop * 1.05  # 5% ullage
-    p_tank = 2.5e6  # Pa regulated
-    tank_mass = volume_m3 * 50  # kg/m³ shell heuristic
+    rho_prop = num("propulsion", "rho_propellant_kg_m3")
+    ullage = num("propulsion", "ullage_frac")
+    volume_m3 = mp / rho_prop * (1 + ullage)
+    p_tank = num("propulsion", "tank_pressure_bar") * 1e5
+    tank_mass = volume_m3 * num("propulsion", "tank_mass_kg_m3")
     return mp, p_tank, rho_prop, state, tank_mass, volume_m3
 
 

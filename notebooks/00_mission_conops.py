@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """00 — Mission CONOPS: fases, eventos, requisitos top-level → MissionSpec."""
 
 import marimo
@@ -26,10 +11,9 @@ def _():
     import marimo as mo
     import polars as pl
 
-    from thor.constants import EI_ALTITUDE_M
     from thor.io.handoff import load_state, save_state, save_table
+    from thor.io.inputs import num, phase_rows, txt
     from thor.models.mission_spec import MissionEvent, MissionPhase, MissionPhaseSpec, MissionSpec
-
     return (
         MissionEvent,
         MissionPhase,
@@ -37,9 +21,12 @@ def _():
         MissionSpec,
         load_state,
         mo,
+        num,
+        phase_rows,
         pl,
         save_state,
         save_table,
+        txt,
     )
 
 
@@ -48,60 +35,52 @@ def _(mo):
     mo.md("""
     # Camada 0 — Mission CONOPS
 
-    Fases: ascent → injection → phasing → rendezvous → docking →
-    loiter → deorbit → EI → reentry → landing.
+    Inputs: `data/inputs/thor_inputs.csv` → sections `mission`, `phase`.
     """)
     return
 
 
 @app.cell
-def _(MissionPhase, MissionPhaseSpec):
-    # Durações nominais [s] — ajuste aqui
-    phase_data = [
-        (MissionPhase.ASCENT, 600, 0, 0),
-        (MissionPhase.INJECTION, 0, 9500, 0),  # ΔV herdado do lançador
-        (MissionPhase.PHASING, 86400, 15, 200),
-        (MissionPhase.RENDEZVOUS, 3600, 45, 150),
-        (MissionPhase.DOCKING, 1800, 5, 100),
-        (MissionPhase.LOITER, 604800, 2, 500),
-        (MissionPhase.DEORBIT, 600, 100, 80),
-        (MissionPhase.ENTRY_INTERFACE, 1, 0, 0),
-        (MissionPhase.REENTRY, 900, 0, 50),
-        (MissionPhase.LANDING, 600, 0, 30),
-    ]
-    phases = [
-        MissionPhaseSpec(
-            phase=p,
-            duration_s=dur,
-            delta_v_m_s=dv,
-            power_wh=pwr,
-            requirements={"EI_alt_m": 122_000} if p == MissionPhase.ENTRY_INTERFACE else {},
+def _(MissionPhase, MissionPhaseSpec, phase_rows):
+    phases = []
+    for row in phase_rows():
+        phase_name = row["item"]
+        phases.append(
+            MissionPhaseSpec(
+                phase=MissionPhase(phase_name),
+                duration_s=float(row["duration_s"]),
+                delta_v_m_s=float(row["delta_v_m_s"]),
+                power_wh=float(row["power_wh"]),
+                requirements={"EI_alt_m": 122_000} if phase_name == "entry_interface" else {},
+            )
         )
-        for p, dur, dv, pwr in phase_data
-    ]
     return (phases,)
 
 
 @app.cell
-def _(MissionEvent, MissionPhase, MissionSpec, phases):
+def _(MissionEvent, MissionPhase, MissionSpec, num, phases, txt):
     events = [
         MissionEvent(name="Liftoff", phase=MissionPhase.ASCENT, t_offset_s=0, duration_s=600),
         MissionEvent(name="Orbit insertion", phase=MissionPhase.INJECTION, t_offset_s=600),
-        MissionEvent(name="Deorbit burn cutoff", phase=MissionPhase.DEORBIT, t_offset_s=sum(p.duration_s for p in phases[:-3])),
+        MissionEvent(
+            name="Deorbit burn cutoff",
+            phase=MissionPhase.DEORBIT,
+            t_offset_s=sum(p.duration_s for p in phases[:-3]),
+        ),
         MissionEvent(name="Entry Interface", phase=MissionPhase.ENTRY_INTERFACE, t_offset_s=0, notes="~122 km"),
         MissionEvent(name="Touchdown", phase=MissionPhase.LANDING, t_offset_s=0),
     ]
     mission = MissionSpec(
-        name="THOR-1",
-        vehicle_class="lifting_body",
+        name=txt("mission", "name"),
+        vehicle_class=txt("mission", "vehicle_class"),
         phases=phases,
         events=events,
         top_level={
-            "max_g_load": 4.0,
-            "peak_heat_flux_W_cm2": 800.0,
-            "downmass_kg": 500.0,
-            "crossrange_km": 80.0,
-            "EI_alt_m": 122_000,
+            "max_g_load": num("mission", "max_g_load"),
+            "peak_heat_flux_W_cm2": num("mission", "peak_heat_flux_W_cm2"),
+            "downmass_kg": num("mission", "downmass_kg"),
+            "crossrange_km": num("mission", "crossrange_km"),
+            "EI_alt_m": num("mission", "EI_alt_m"),
         },
     )
     return (mission,)

@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """32 — Control surfaces: body flap / RCS authority."""
 
 import marimo
@@ -26,24 +11,25 @@ def _():
     import marimo as mo
     import polars as pl
 
-    from thor.io.handoff import save_table
-    return mo, pl, save_table
+    from thor.io.handoff import load_state, save_table
+    from thor.io.inputs import num
+    return load_state, mo, num, pl, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 3 — Control Surfaces")
+    mo.md("# Camada 3 — Control Surfaces\n\nInputs: `control` + `aero` in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(mo, pl):
-    # Lifting body: elevons; Cápsula: RCS
-    q_dyn = 5000  # Pa @ hypersonic trim
-    s_ref = 10  # m²
-    cm_req = 0.05
-    arm = 2.0  # m
-    flap_area = cm_req * q_dyn * s_ref * 0.5 / (q_dyn * arm)  # simplificado
+def _(load_state, num):
+    state = load_state()
+    q_dyn = num("control", "q_dyn_Pa")
+    s_ref = state.aero.reference_area_m2 or num("aero", "reference_area_m2")
+    cm_req = num("control", "cm_required")
+    arm = num("control", "moment_arm_m")
+    flap_area = cm_req * q_dyn * s_ref * 0.5 / (q_dyn * arm)
     df = pl.DataFrame(
         {
             "surface": ["body_flap_port", "body_flap_stbd", "RCS_pitch"],
@@ -52,12 +38,12 @@ def _(mo, pl):
             "authority": ["primary", "primary", "backup"],
         }
     )
-    mo.ui.table(df)
-    return arm, cm_req, df, flap_area, q_dyn, s_ref
+    return arm, cm_req, df, flap_area, q_dyn, s_ref, state
 
 
 @app.cell
 def _(df, mo, save_table):
+    mo.ui.table(df)
     save_table("control_surfaces", df)
     mo.md("✓ Superfícies de controle dimensionadas")
     return

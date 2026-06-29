@@ -1,6 +1,12 @@
-# THOR pipeline artifacts
-data/
-*.duckdb
+# THOR pipeline artifacts (generated at runtime)
+data/vehicle_state.json
+data/parquet/
+data/*.duckdb
+notebooks/__marimo__/
+
+# Keep central input spreadsheet in git
+!data/inputs/
+!data/inputs/**
 
 # Python
 __pycache__/
@@ -8,6 +14,3 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
-
-# Marimo session cache
-notebooks/__marimo__/

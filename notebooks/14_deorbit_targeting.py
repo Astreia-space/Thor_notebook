@@ -1,23 +1,8 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """14 — Deorbit targeting → estado na Entry Interface (122 km)."""
 
 import marimo
 
-__generated_with = "0.10.0"
+__generated_with = "0.23.9"
 app = marimo.App(width="medium")
 
 
@@ -27,45 +12,40 @@ def _():
     import math
     import polars as pl
 
-    from thor.constants import EI_ALTITUDE_M, MU_EARTH, R_EARTH
+    from thor.constants import MU_EARTH, R_EARTH
     from thor.io.handoff import load_state, save_state, save_table
+    from thor.io.inputs import num
     from thor.models.vehicle_state import EntryState
-    return (
-        EI_ALTITUDE_M,
-        EntryState,
-        MU_EARTH,
-        R_EARTH,
-        load_state,
-        math,
-        mo,
-        pl,
-        save_state,
-        save_table,
-    )
+    return EntryState, MU_EARTH, R_EARTH, load_state, math, mo, num, pl, save_state, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 1 — Deorbit Targeting → Entry Interface")
+    mo.md("# Camada 1 — Deorbit Targeting\n\nInputs: `entry` section in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(EI_ALTITUDE_M, MU_EARTH, R_EARTH, load_state, math):
+def _(EntryState, MU_EARTH, R_EARTH, load_state, math, num):
     state = load_state()
-    alt_orbit = state.orbit.altitude_km * 1000
+    alt_orbit = state.orbit.altitude_km * 1000 if state.orbit else num("orbit", "altitude_km") * 1000
     r = R_EARTH + alt_orbit
     v_circ = math.sqrt(MU_EARTH / r)
-    dv_deorbit = 100.0  # m/s retrograde
-    v_ei = math.sqrt(v_circ**2 + dv_deorbit**2 - 2 * v_circ * dv_deorbit)  # approx
-    entry = EntryState(
-        altitude_m=EI_ALTITUDE_M,
-        velocity_m_s=v_ei,
-        flight_path_angle_deg=-1.5,
-        heading_deg=90.0,
-        ballistic_coefficient_kg_m2=200.0,
+    dv_deorbit = num("entry", "deorbit_dv_m_s")
+    v_override = num("entry", "velocity_m_s")
+    v_ei = (
+        v_override
+        if v_override > 0
+        else math.sqrt(max(v_circ**2 + dv_deorbit**2 - 2 * v_circ * dv_deorbit, 0))
     )
-    return alt_orbit, dv_deorbit, entry, r, state, v_circ, v_ei
+    entry = EntryState(
+        altitude_m=num("entry", "altitude_m"),
+        velocity_m_s=v_ei,
+        flight_path_angle_deg=num("entry", "flight_path_angle_deg"),
+        heading_deg=num("entry", "heading_deg"),
+        ballistic_coefficient_kg_m2=num("entry", "ballistic_coefficient_kg_m2"),
+    )
+    return (entry,)
 
 
 @app.cell
@@ -83,7 +63,7 @@ def _(entry, mo, pl):
         }
     )
     mo.ui.table(df)
-    return df
+    return
 
 
 @app.cell
@@ -91,9 +71,12 @@ def _(entry, load_state, mo, pl, save_state, save_table):
     state = load_state()
     state.entry = entry
     save_state(state)
-    save_table("entry_interface", pl.DataFrame({"key": ["h", "V", "gamma"], "value": [entry.altitude_m, entry.velocity_m_s, entry.flight_path_angle_deg]}))
+    save_table(
+        "entry_interface",
+        pl.DataFrame({"key": ["h", "V", "gamma"], "value": [entry.altitude_m, entry.velocity_m_s, entry.flight_path_angle_deg]}),
+    )
     mo.md("✓ EntryState → vehicle_state (entrada Camada 2)")
-    return state
+    return
 
 
 if __name__ == "__main__":

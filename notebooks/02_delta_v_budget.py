@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """02 — ΔV Budget: injeção, phasing, rendezvous, deorbit, RCS."""
 
 import marimo
@@ -27,28 +12,28 @@ def _():
     import polars as pl
 
     from thor.io.handoff import load_state, save_state, save_table
+    from thor.io.inputs import items_with_params
     from thor.models.vehicle_state import DeltaVBudget, DeltaVItem
-    return DeltaVBudget, DeltaVItem, load_state, mo, pl, save_state, save_table
+    return DeltaVBudget, DeltaVItem, items_with_params, load_state, mo, pl, save_state, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 0 — ΔV Budget")
+    mo.md("# Camada 0 — ΔV Budget\n\nInputs: `delta_v` section in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(DeltaVItem):
-    # ΔV por fase [m/s] + margem por item
+def _(DeltaVItem, items_with_params):
     dv_items = [
-        DeltaVItem(phase="injection (launcher)", delta_v_m_s=9500, margin_frac=0.0),
-        DeltaVItem(phase="phasing", delta_v_m_s=15, margin_frac=0.10),
-        DeltaVItem(phase="rendezvous/braking", delta_v_m_s=45, margin_frac=0.10),
-        DeltaVItem(phase="station_keeping", delta_v_m_s=2, margin_frac=0.20),
-        DeltaVItem(phase="deorbit", delta_v_m_s=100, margin_frac=0.05),
-        DeltaVItem(phase="RCS/dispersions", delta_v_m_s=20, margin_frac=0.15),
+        DeltaVItem(
+            phase=row["item"],
+            delta_v_m_s=float(row["delta_v_m_s"]),
+            margin_frac=float(row["margin_frac"]),
+        )
+        for row in items_with_params("delta_v", "delta_v_m_s", "margin_frac")
     ]
-    return dv_items
+    return (dv_items,)
 
 
 @app.cell

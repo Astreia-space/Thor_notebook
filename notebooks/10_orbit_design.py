@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """10 — Orbit design: órbita-alvo, elementos, janelas."""
 
 import marimo
@@ -26,41 +11,30 @@ def _():
     import marimo as mo
     import polars as pl
 
-    from thor.constants import ORBIT_ALT_KM, ORBIT_INC_DEG
     from thor.io.handoff import load_state, save_state, save_table
+    from thor.io.inputs import num
     from thor.models.vehicle_state import OrbitState
     from thor.physics.astro import circular_velocity, mean_motion
-    return (
-        ORBIT_ALT_KM,
-        ORBIT_INC_DEG,
-        OrbitState,
-        circular_velocity,
-        load_state,
-        mean_motion,
-        mo,
-        pl,
-        save_state,
-        save_table,
-    )
+    return OrbitState, circular_velocity, load_state, mean_motion, mo, num, pl, save_state, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 1 — Orbit Design")
+    mo.md("# Camada 1 — Orbit Design\n\nInputs: `orbit` section in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(ORBIT_ALT_KM, ORBIT_INC_DEG, OrbitState):
+def _(OrbitState, num):
     orbit = OrbitState(
-        altitude_km=ORBIT_ALT_KM,
-        inclination_deg=ORBIT_INC_DEG,
-        eccentricity=0.001,
-        raan_deg=120.0,
-        arg_perigee_deg=0.0,
-        true_anomaly_deg=0.0,
+        altitude_km=num("orbit", "altitude_km"),
+        inclination_deg=num("orbit", "inclination_deg"),
+        eccentricity=num("orbit", "eccentricity"),
+        raan_deg=num("orbit", "raan_deg"),
+        arg_perigee_deg=num("orbit", "arg_perigee_deg"),
+        true_anomaly_deg=num("orbit", "true_anomaly_deg"),
     )
-    return orbit
+    return (orbit,)
 
 
 @app.cell
@@ -90,7 +64,7 @@ def _(load_state, mo, orbit, save_state):
     state = load_state()
     state.orbit = orbit
     save_state(state)
-    mo.md("✓ OrbitState → vehicle_state (Orekit/poliastro plug-in aqui)")
+    mo.md("✓ OrbitState → vehicle_state")
     return state
 
 

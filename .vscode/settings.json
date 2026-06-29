@@ -1,0 +1,6 @@
+{
+  "recommendations": ["marimo-team.vscode-marimo"],
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "python.terminal.activateEnvironment": true,
+  "marimo.pythonPath": "${workspaceFolder}/.venv/bin/python"
+}

@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """31 — Stability & trim: CG vs CP, margem estática."""
 
 import marimo
@@ -27,23 +12,23 @@ def _():
     import polars as pl
 
     from thor.io.handoff import load_state, save_table
-    return load_state, mo, pl, save_table
+    from thor.io.inputs import num
+    return load_state, mo, num, pl, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 3 — Stability & Trim")
+    mo.md("# Camada 3 — Stability & Trim\n\nInputs: `stability` section in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(load_state):
-    state = load_state()
-    cg_x = 0.62  # x/c — lifting body: CG aft
-    cp_x = 0.58
-    static_margin = (cp_x - cg_x)  # neg = instável em α
-    alpha_trim = 8.0  # deg — from aero DB
-    return alpha_trim, cg_x, cp_x, state, static_margin
+def _(num):
+    cg_x = num("stability", "cg_x_c")
+    cp_x = num("stability", "cp_x_c")
+    static_margin = cp_x - cg_x
+    alpha_trim = num("stability", "alpha_trim_deg")
+    return alpha_trim, cg_x, cp_x, static_margin
 
 
 @app.cell

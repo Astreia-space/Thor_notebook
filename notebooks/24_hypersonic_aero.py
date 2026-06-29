@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """24 — Hypersonic aero: Newtoniano modificado → Cl/Cd/Cm."""
 
 import marimo
@@ -28,19 +13,20 @@ def _():
     import polars as pl
 
     from thor.io.handoff import load_state, save_state, save_table
+    from thor.io.inputs import num
     from thor.physics.aero import hypersonic_cd_cl
-    return hypersonic_cd_cl, load_state, mo, np, pl, save_state, save_table
+    return hypersonic_cd_cl, load_state, mo, np, num, pl, save_state, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 2 — Hypersonic Aero (Cp = Cp_max·sin²θ)")
+    mo.md("# Camada 2 — Hypersonic Aero\n\nInputs: `hypersonic` in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(hypersonic_cd_cl, np):
-    cp_max = 1.8
+def _(hypersonic_cd_cl, np, num):
+    cp_max = num("hypersonic", "cp_max")
     alphas = np.linspace(-20, 20, 41)
     rows = []
     for a in alphas:

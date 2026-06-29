@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """20 — Atmosphere: US Standard 1976 + NRLMSISE-00 placeholder."""
 
 import marimo
@@ -28,19 +13,20 @@ def _():
     import polars as pl
 
     from thor.io.handoff import save_table
+    from thor.io.inputs import num
     from thor.physics.atmosphere import nrlmsise00_placeholder, us76_density
-    return mo, np, pl, save_table, us76_density, nrlmsise00_placeholder
+    return mo, np, num, pl, save_table, us76_density, nrlmsise00_placeholder
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 2 — Atmosphere Model (ρ é tudo no aquecimento)")
+    mo.md("# Camada 2 — Atmosphere Model\n\nInputs: `atmosphere` in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(np, nrlmsise00_placeholder, pl, us76_density):
-    h = np.linspace(0, 120_000, 200)
+def _(np, num, nrlmsise00_placeholder, pl, us76_density):
+    h = np.linspace(num("atmosphere", "h_min_m"), num("atmosphere", "h_max_m"), int(num("atmosphere", "n_points")))
     df = pl.DataFrame(
         {
             "h_km": h / 1000,
@@ -58,8 +44,7 @@ def _(df, mo):
     fig, ax = plt.subplots(figsize=(7, 4))
     ax.semilogy(df["h_km"], df["rho_us76"], label="US76")
     ax.semilogy(df["h_km"], df["rho_nrlmsise"], "--", label="NRLMSISE (placeholder)")
-    ax.set_xlabel("Altitude [km]")
-    ax.set_ylabel("ρ [kg/m³]")
+    ax.set(xlabel="Altitude [km]", ylabel="ρ [kg/m³]")
     ax.legend()
     ax.grid(True, which="both", alpha=0.3)
     mo.ui.pyplot(fig)

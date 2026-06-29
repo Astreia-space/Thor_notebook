@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """41 — RCS sizing: thrusters, phase-plane."""
 
 import marimo
@@ -27,21 +12,22 @@ def _():
     import polars as pl
 
     from thor.io.handoff import save_table
-    return mo, pl, save_table
+    from thor.io.inputs import num
+    return mo, num, pl, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 4 — RCS Sizing")
+    mo.md("# Camada 4 — RCS Sizing\n\nInputs: `rcs` in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(mo, pl):
-    thrust_rcs = 100  # N por thruster
-    arm = 1.5  # m
+def _(mo, num, pl):
+    thrust_rcs = num("rcs", "thrust_N")
+    arm = num("rcs", "arm_m")
     torque = thrust_rcs * arm
-    n_thrusters = 12
+    n_thrusters = int(num("rcs", "n_thrusters"))
     df = pl.DataFrame(
         {
             "axis": ["+X", "-X", "+Y", "-Y", "+Z", "-Z"],

@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """21 — Entry trajectory 3DOF + Allen-Eggers sanity check."""
 
 import marimo
@@ -27,13 +12,14 @@ def _():
     import polars as pl
 
     from thor.io.handoff import load_state, save_table
+    from thor.io.inputs import num
     from thor.physics.entry import allen_eggers_peak_heat, integrate_entry_3dof
-    return allen_eggers_peak_heat, integrate_entry_3dof, load_state, mo, pl, save_table
+    return allen_eggers_peak_heat, integrate_entry_3dof, load_state, mo, num, pl, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 2 — Entry Trajectory 3DOF (β = m/(Cd·A))")
+    mo.md("# Camada 2 — Entry Trajectory 3DOF\n\nInputs: `entry` + `aero` in `thor_inputs.csv`")
     return
 
 
@@ -53,19 +39,19 @@ def _(integrate_entry_3dof, load_state):
 
 
 @app.cell
-def _(allen_eggers_peak_heat, e, mo, traj):
+def _(allen_eggers_peak_heat, e, mo, num, traj):
     import numpy as np
 
     g_peak = float(np.max(traj["g_load"]))
     q_peak = float(np.max(traj["q_W_cm2"]))
-    rho_ei = 3.9e-7
-    q_ae, _ = allen_eggers_peak_heat(e.velocity_m_s, rho_ei, 0.5)
+    rho_ei = num("entry", "rho_ei_kg_m3")
+    rn = num("aero", "nose_radius_m")
+    q_ae, _ = allen_eggers_peak_heat(e.velocity_m_s, rho_ei, rn)
     mo.vstack(
         mo.md(f"**Pico g-load:** {g_peak:.2f} g"),
         mo.md(f"**Pico q̇:** {q_peak:.0f} W/cm² (Allen-Eggers ~{q_ae/1e4:.0f} W/cm²)"),
-        mo.md(f"**Downrange:** ~{traj['h_m'][0]/1000 - traj['h_m'][-1]/1000:.0f} km (approx)"),
     )
-    return g_peak, q_ae, q_peak, np
+    return g_peak, np, q_ae, q_peak, rn, rho_ei
 
 
 @app.cell

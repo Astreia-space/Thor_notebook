@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """03 — Power / Energy Budget: Wh por fase."""
 
 import marimo
@@ -27,40 +12,28 @@ def _():
     import polars as pl
 
     from thor.io.handoff import load_state, save_state, save_table
+    from thor.io.inputs import phase_rows
     from thor.models.vehicle_state import PowerBudget, PowerItem
-    return PowerBudget, PowerItem, load_state, mo, pl, save_state, save_table
+    return PowerBudget, PowerItem, load_state, mo, phase_rows, pl, save_state, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 0 — Power / Energy Budget")
+    mo.md("# Camada 0 — Power / Energy Budget\n\nInputs: `phase` → `power_wh` in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(PowerItem, load_state):
-    state = load_state()
-    # Potência média [W] × duração [s] por fase
-    defaults = [
-        ("phasing", 200, 86400),
-        ("rendezvous", 150, 3600),
-        ("docking", 100, 1800),
-        ("loiter", 500, 604800),
-        ("deorbit", 80, 600),
-        ("reentry (battery only)", 50, 900),
-        ("landing", 30, 600),
-    ]
-    if state.mission:
-        # Sobrescreve durações da missão quando disponível
-        dur_map = {p.phase.value: p.duration_s for p in state.mission.phases}
-        items = []
-        for name, pwr, _ in defaults:
-            key = name.split()[0]
-            dur = dur_map.get(key, defaults[[d[0] for d in defaults].index(name)][2])
-            items.append(PowerItem(phase=name, average_power_W=pwr, duration_s=dur))
-    else:
-        items = [PowerItem(phase=n, average_power_W=p, duration_s=d) for n, p, d in defaults]
-    return defaults, items, state
+def _(PowerItem, phase_rows):
+    items = []
+    for row in phase_rows():
+        dur = float(row["duration_s"])
+        wh = float(row["power_wh"])
+        if dur <= 0 and wh <= 0:
+            continue
+        avg_pwr = wh * 3600 / dur if dur > 0 else 0.0
+        items.append(PowerItem(phase=row["item"], average_power_W=avg_pwr, duration_s=dur))
+    return (items,)
 
 
 @app.cell

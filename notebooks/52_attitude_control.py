@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """52 — Attitude control: RCS / wheels."""
 
 import marimo
@@ -27,29 +12,26 @@ def _():
     import polars as pl
 
     from thor.io.handoff import load_table, save_table
-    return load_table, mo, pl, save_table
+    from thor.io.inputs import num
+    return load_table, mo, num, pl, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 5 — Attitude Control")
+    mo.md("# Camada 5 — Attitude Control\n\nInputs: `gnc` + `rcs` in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(load_table):
+def _(load_table, num):
     rcs = load_table("rcs_sizing")
-    return rcs
+    torque_req = num("gnc", "torque_required_Nm")
+    torque_avail = float(rcs["torque_Nm"][0]) if rcs is not None else num("rcs", "thrust_N") * num("rcs", "arm_m")
+    return rcs, torque_avail, torque_req
 
 
 @app.cell
-def _(mo, pl, rcs):
-    iyy = 25_000  # kg·m² from 50
-    torque_req = 500  # N·m slew
-    if rcs is not None:
-        torque_avail = float(rcs["torque_Nm"][0])
-    else:
-        torque_avail = 150
+def _(mo, pl, torque_avail, torque_req):
     df = pl.DataFrame(
         {
             "metric": ["τ_req [Nm]", "τ_RCS [Nm]", "adequate"],
@@ -57,7 +39,7 @@ def _(mo, pl, rcs):
         }
     )
     mo.ui.table(df)
-    return df, iyy, torque_avail, torque_req
+    return df
 
 
 @app.cell

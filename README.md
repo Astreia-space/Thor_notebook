@@ -12,20 +12,27 @@ pip install -U -r requirements.txt
 pip install -e .
 ```
 
+**Edit all sizing numbers in one spreadsheet:** `data/inputs/thor_inputs.csv`  
+Sections: `mission`, `phase`, `mass`, `delta_v`, `link`, `orbit`, `entry`, `aero`, `geometry`, `propulsion`, `tps`, `docking`, `nav`, `loads`, `thermal`, `power`, `mdao`, `trade`, …  
+Preview: `00_inputs.py` · validate: `./scripts/validate_pipeline.py`
+
 ## Run
 
-**Browser**
+**Browser** (always use the project venv — do not use system `marimo`)
 
 ```bash
-marimo edit notebooks/00_mission_conops.py
+source .venv/bin/activate
+.venv/bin/marimo edit notebooks/00_mission_conops.py
+# or:
+./scripts/marimo.sh notebooks/00_mission_conops.py
 ```
 
 **Cursor / VS Code**
 
 1. Install the [marimo extension](https://marketplace.visualstudio.com/items?itemName=marimo-team.vscode-marimo) (`marimo-team.vscode-marimo`)
 2. Open a notebook → marimo icon (top-right), or `Cmd+Shift+P` → `marimo: Open as marimo notebook`
-3. Select the Python interpreter for this project
+3. Select interpreter: **`thor_notebook/.venv/bin/python`**
 
 ## Suggested order
 
-`00`–`04` → `10`, `12`–`14` → `20`–`24` → `30`–`33` → `40`–`42` → `50`–`53` → `60`–`62` → `70`–`71` → `80`–`81` → `90`–`91`
+`00_inputs` → `00`–`04` → `10`, `12`–`14` → `20`–`24` → `30`–`33` → `40`–`42` → `50`–`53` → `60`–`62` → `70`–`71` → `80`–`81` → `90`–`91`

@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """33 — Terminal descent: paraquedas ou glide subsônico."""
 
 import marimo
@@ -27,32 +12,29 @@ def _():
     import polars as pl
 
     from thor.io.handoff import load_state, save_table
-    return load_state, mo, pl, save_table
+    from thor.io.inputs import num
+    return load_state, mo, num, pl, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 3 — Terminal Descent")
+    mo.md("# Camada 3 — Terminal Descent\n\nInputs: `terminal` in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(load_state):
+def _(load_state, num):
     state = load_state()
-    mass = state.mass.dry_mass_kg if state.mass.dry_mass_kg else 3500
-    ld = state.aero.ld if state.aero.ld else 0.5
-    v_terminal = 55  # m/s antes paraquedas
-    # Glide subsônico: V L/D ≈ mg → V = mg/(ρ S Cl) ...
-    glide_slope = 4.0  # deg
+    ld = state.aero.ld if state.aero.ld else num("aero", "cl") / num("aero", "cd")
     df = pl.DataFrame(
         {
             "mode": ["supersonic_drogue", "main_chute", "glide_approach"],
-            "altitude_km": [10, 3, 0.5],
-            "velocity_m_s": [450, 120, v_terminal],
-            "notes": ["Mortar deploy", f"L/D={ld:.2f}", f"slope={glide_slope}°"],
+            "altitude_km": [num("terminal", "drogue_alt_km"), num("terminal", "main_chute_alt_km"), num("terminal", "glide_alt_km")],
+            "velocity_m_s": [num("terminal", "drogue_vel_m_s"), num("terminal", "main_chute_vel_m_s"), num("terminal", "v_terminal_m_s")],
+            "notes": ["Mortar deploy", f"L/D={ld:.2f}", f"slope={num('terminal', 'glide_slope_deg')}°"],
         }
     )
-    return df, glide_slope, ld, mass, state, v_terminal
+    return df, ld, state
 
 
 @app.cell

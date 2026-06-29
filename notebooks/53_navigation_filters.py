@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """53 — Navigation filters: IMU, EKF/UKF."""
 
 import marimo
@@ -25,29 +10,28 @@ app = marimo.App(width="medium")
 def _():
     import marimo as mo
     import polars as pl
-    return mo, pl
+
+    from thor.io.inputs import item_table
+    return item_table, mo, pl
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 5 — Navigation (sistema inercial)")
+    mo.md("# Camada 5 — Navigation\n\nInputs: `nav` in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(mo, pl):
-    # Erros típicos IMU + sensores
+def _(item_table, mo, pl):
+    raw = item_table("nav")
     df = pl.DataFrame(
         {
-            "sensor": ["IMU gyro", "IMU accel", "Star tracker", "GNSS"],
-            "error": ["0.01 °/s", "100 μg", "10 arcsec", "5 m"],
-            "phase": ["all", "all", "on-orbit", "ascent/landing"],
+            "sensor": raw["item"],
+            "error": raw["error"].cast(pl.Utf8),
+            "phase": raw["phase"].cast(pl.Utf8),
         }
     )
-    mo.vstack(
-        mo.md("EKF/UKF: fusão IMU + ST + GNSS (implementar com filterpy/etc.)"),
-        mo.ui.table(df),
-    )
+    mo.vstack(mo.md("EKF/UKF: fusão IMU + ST + GNSS (placeholder)"), mo.ui.table(df))
     return df
 
 

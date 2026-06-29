@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """71 — Power system: arrays, baterias, EPS."""
 
 import marimo
@@ -27,21 +12,22 @@ def _():
     import polars as pl
 
     from thor.io.handoff import load_state, save_table
-    return load_state, mo, pl, save_table
+    from thor.io.inputs import num
+    return load_state, mo, num, pl, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 7 — Power System")
+    mo.md("# Camada 7 — Power System\n\nInputs: `power` + mission energy from 03")
     return
 
 
 @app.cell
-def _(load_state):
+def _(load_state, num):
     state = load_state()
     e_total = state.power.total_wh or 5000
-    battery_wh = e_total * 1.2  # margin
-    array_power = 2000  # W
+    battery_wh = e_total * num("power", "battery_margin_frac")
+    array_power = num("power", "array_power_W")
     return array_power, battery_wh, e_total, state
 
 

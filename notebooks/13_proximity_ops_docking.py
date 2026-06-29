@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """13 — Proximity ops & docking: V-bar/R-bar, closing velocity."""
 
 import marimo
@@ -26,36 +11,34 @@ def _():
     import marimo as mo
     import polars as pl
 
-    from thor.io.handoff import save_table
-    return mo, pl, save_table
+    from thor.io.handoff import load_state, save_table
+    from thor.io.inputs import item_table, num
+    return item_table, load_state, mo, num, pl, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 1 — Proximity Ops & Docking")
+    mo.md("# Camada 1 — Proximity Ops & Docking\n\nInputs: `docking` in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(mo, pl):
-    # Elipsoide de aproximação simplificado (Keep-out + approach)
-    approach = pl.DataFrame(
-        {
-            "gate": ["Waypoint 4", "Waypoint 3", "Waypoint 2", "Capture"],
-            "range_m": [300, 30, 3, 0.1],
-            "closing_vel_m_s": [0.10, 0.05, 0.03, 0.01],
-            "mode": ["V-bar", "V-bar", "R-bar", "R-bar"],
-        }
-    )
-    # Carga de docking: F = m · a
-    m_dock = 3500  # kg
-    a_contact = 0.05  # m/s²
+def _(item_table, load_state, num):
+    approach = item_table("docking").rename({"item": "gate"})
+    state = load_state()
+    m_dock = state.mass.wet_mass_kg or state.mass.dry_mass_kg or 3500
+    a_contact = num("docking", "contact_accel_m_s2")
     f_dock = m_dock * a_contact
+    return a_contact, approach, f_dock, m_dock, state
+
+
+@app.cell
+def _(approach, f_dock, mo):
     mo.vstack(
         mo.md(f"**Carga de contato estimada:** {f_dock:.0f} N → alimenta 60_loads"),
         mo.ui.table(approach),
     )
-    return a_contact, approach, f_dock, m_dock
+    return
 
 
 @app.cell

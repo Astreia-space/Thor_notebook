@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """91 — Trade studies: cápsula vs lifting body, Pareto."""
 
 import marimo
@@ -28,29 +13,34 @@ def _():
     import polars as pl
 
     from thor.io.handoff import save_table
+    from thor.io.inputs import num
     from thor.physics.entry import integrate_entry_3dof
-    return integrate_entry_3dof, mo, np, pl, save_table
+    return integrate_entry_3dof, mo, np, num, pl, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 9 — Trade Studies")
+    mo.md("# Camada 9 — Trade Studies\n\nInputs: `trade` + `entry` in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(integrate_entry_3dof, np):
+def _(integrate_entry_3dof, num, np):
     import math
 
-    betas = np.linspace(100, 400, 7)
+    betas = np.linspace(num("trade", "beta_min"), num("trade", "beta_max"), int(num("trade", "beta_steps")))
+    h_ei = num("entry", "altitude_m")
+    gamma = math.radians(num("entry", "flight_path_angle_deg"))
+    v_ei = num("entry", "velocity_m_s") or 7800.0
+    s_ref = num("trade", "s_ref_m2")
     configs = ["capsule", "lifting_body"]
     rows = []
     for cfg in configs:
-        cd = 1.5 if cfg == "capsule" else 0.8
-        cl = 0.1 if cfg == "capsule" else 0.4
+        cd = num("trade", "cd", cfg)
+        cl = num("trade", "cl", cfg)
         for beta in betas:
-            m = beta * cd * 10
-            traj = integrate_entry_3dof(122e3, 7800, math.radians(-1.5), beta)
+            m = beta * cd * s_ref
+            traj = integrate_entry_3dof(h_ei, v_ei, gamma, beta)
             rows.append(
                 {
                     "config": cfg,
@@ -62,7 +52,7 @@ def _(integrate_entry_3dof, np):
                 }
             )
     df = pl.DataFrame(rows)
-    return beta, betas, cd, cfg, cl, configs, df, math, m, rows, traj
+    return betas, configs, df, gamma, h_ei, math, rows, s_ref, v_ei
 
 
 @app.cell

@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """61 — Primary structure sizing."""
 
 import marimo
@@ -27,33 +12,33 @@ def _():
     import polars as pl
 
     from thor.io.handoff import load_state, save_table
-    return load_state, mo, pl, save_table
+    from thor.io.inputs import num
+    return load_state, mo, num, pl, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 6 — Primary Structure")
+    mo.md("# Camada 6 — Primary Structure\n\nInputs: `structure` in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(load_state):
+def _(load_state, num):
     state = load_state()
-    m_struct = 1200
-    material = "Al-Li 2195 + CFRP"
-    sigma_allow = 300e6  # Pa
-    load_g = 6
+    m_struct = num("structure", "m_structure_kg")
+    sigma_allow = num("structure", "sigma_allow_Pa")
+    load_g = num("structure", "load_g")
     mass = state.mass.dry_mass_kg or 3500
     area_load = mass * 9.81 * load_g / sigma_allow
-    return area_load, load_g, m_struct, mass, material, sigma_allow, state
+    return area_load, load_g, m_struct, mass, sigma_allow, state
 
 
 @app.cell
-def _(area_load, material, mo, m_struct, pl):
+def _(area_load, m_struct, mo, num, pl):
     df = pl.DataFrame(
         {
-            "item": ["material", "m_structure [kg]", "A_min [m²]"],
-            "value": [material, m_struct, round(area_load, 3)],
+            "item": ["m_structure [kg]", "A_min [m²]", "sigma_allow [MPa]"],
+            "value": [m_struct, round(area_load, 3), num("structure", "sigma_allow_Pa") / 1e6],
         }
     )
     mo.ui.table(df)

@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """51 — Attitude dynamics 6DOF (quaternions)."""
 
 import marimo
@@ -25,18 +10,19 @@ app = marimo.App(width="medium")
 def _():
     import marimo as mo
     import numpy as np
-    return mo, np
+
+    from thor.io.inputs import num
+    return mo, np, num
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 5 — Attitude Dynamics 6DOF")
+    mo.md("# Camada 5 — Attitude Dynamics 6DOF\n\nInputs: `gnc` in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(mo, np):
-    # Quaternion kinematics: q̇ = 0.5 Ω(ω) q
+def _(mo, np, num):
     def omega_matrix(w):
         wx, wy, wz = w
         return 0.5 * np.array(
@@ -49,11 +35,11 @@ def _(mo, np):
         )
 
     q = np.array([1.0, 0, 0, 0])
-    w = np.array([0.01, 0.02, -0.005])  # rad/s
-    dt = 1.0
+    w = np.array([num("gnc", "gyro_x_rad_s"), num("gnc", "gyro_y_rad_s"), num("gnc", "gyro_z_rad_s")])
+    dt = num("gnc", "dt_s")
     q_new = q + omega_matrix(w) @ q * dt
     q_new /= np.linalg.norm(q_new)
-    mo.md(f"Quaternion após 1 s: `{q_new.round(4)}`")
+    mo.md(f"Quaternion após {dt:.0f} s: `{q_new.round(4)}`")
     return dt, omega_matrix, q, q_new, w
 
 

@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """23 — TPS sizing: condução 1D transiente, espessura → massa."""
 
 import marimo
@@ -27,12 +12,13 @@ def _():
     import polars as pl
 
     from thor.io.handoff import load_state, load_table, save_state, save_table
-    return load_state, load_table, mo, pl, save_state, save_table
+    from thor.io.inputs import num
+    return load_state, load_table, mo, num, pl, save_state, save_table
 
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 2 — TPS Sizing (1D transiente, critério bondline)")
+    mo.md("# Camada 2 — TPS Sizing\n\nInputs: `tps` section in `thor_inputs.csv`")
     return
 
 
@@ -44,17 +30,15 @@ def _(load_table):
 
 
 @app.cell
-def _(mo, q_peak):
-    # PICA-like: ρ=270 kg/m³, k≈0.15 W/mK, bondline T_max=180°C
-    rho_tps = 270
-    k = 0.15
+def _(mo, num, q_peak):
+    rho_tps = num("tps", "rho_kg_m3")
+    k = num("tps", "conductivity_W_mK")
+    cp = num("tps", "cp_J_kgK")
+    t_peak = num("tps", "exposure_time_s")
+    area_tps = num("tps", "shield_area_m2")
     q_w_m2 = q_peak * 1e4
-    t_peak = 300  # s exposição efectiva
-    # Espessura 1D semi-infinito: δ ≈ 2√(α·t), α=k/(ρ·cp)
-    cp = 1200
     alpha = k / (rho_tps * cp)
-    thickness_m = 2 * (alpha * t_peak) ** 0.5 + q_w_m2 * 0.001 / k  # condução + ablação margin
-    area_tps = 15.0  # m² escudo
+    thickness_m = 2 * (alpha * t_peak) ** 0.5 + q_w_m2 * 0.001 / k
     mass_tps = rho_tps * thickness_m * area_tps
     mo.vstack(
         mo.md(f"**Espessura TPS:** {thickness_m*1000:.1f} mm"),
@@ -70,7 +54,6 @@ def _(load_state, mass_tps, mo, pl, save_state, save_table, thickness_m):
         if item.name == "TPS":
             item.dry_kg = mass_tps
             item.growth_kg = mass_tps * state.mass.growth_allowance
-    # Atualiza β
     cd, area = state.aero.cd, state.aero.reference_area_m2
     state.entry.ballistic_coefficient_kg_m2 = state.mass.dry_mass_kg / (cd * area)
     save_state(state)

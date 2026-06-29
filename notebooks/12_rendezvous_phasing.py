@@ -1,18 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "marimo>=0.9.0",
-#     "polars",
-#     "matplotlib",
-#     "numpy",
-#     "pydantic>=2",
-#     "duckdb",
-#     "thor-notebook",
-# ]
-#
-# [tool.uv.sources]
-# thor-notebook = { path = "..", editable = true }
-# ///
 """12 — Rendezvous phasing: Hohmann + Clohessy-Wiltshire → ΔV braking."""
 
 import marimo
@@ -28,6 +13,7 @@ def _():
     import polars as pl
 
     from thor.io.handoff import load_state, save_state, save_table
+    from thor.io.inputs import num
     from thor.physics.astro import hohmann_delta_v, hill_clohessy_wiltshire, mean_motion
     return (
         hill_clohessy_wiltshire,
@@ -36,6 +22,7 @@ def _():
         mean_motion,
         mo,
         np,
+        num,
         pl,
         save_state,
         save_table,
@@ -44,37 +31,35 @@ def _():
 
 @app.cell
 def _(mo):
-    mo.md("# Camada 1 — Rendezvous & Phasing (Hohmann + Hill)")
+    mo.md("# Camada 1 — Rendezvous & Phasing\n\nInputs: `rendezvous` + `orbit` in `thor_inputs.csv`")
     return
 
 
 @app.cell
-def _(hohmann_delta_v, load_state):
+def _(hohmann_delta_v, load_state, num):
     state = load_state()
-    chaser_alt = 380e3
-    target_alt = state.orbit.altitude_km * 1000 if state.orbit else 400e3
+    chaser_alt = num("rendezvous", "chaser_alt_km") * 1000
+    target_alt = state.orbit.altitude_km * 1000 if state.orbit else num("orbit", "altitude_km") * 1000
     dv1, dv2 = hohmann_delta_v(chaser_alt, target_alt)
-    dv_braking = abs(dv2) + 15  # CW terminal + margin
+    dv_braking = abs(dv2) + num("rendezvous", "braking_margin_m_s")
     return chaser_alt, dv1, dv2, dv_braking, state, target_alt
 
 
 @app.cell
-def _(chaser_alt, dv1, dv2, dv_braking, mean_motion, mo, np, pl, target_alt):
+def _(dv1, dv2, dv_braking, hill_clohessy_wiltshire, mean_motion, mo, np, num, pl, target_alt):
     n = mean_motion(target_alt)
-    x0 = np.array([500.0, 0, 0, 0, -0.5, 0])  # 500 m atrás, approach lento
-    xf = hill_clohessy_wiltshire(n, 3600, x0)
+    x0 = np.array([num("rendezvous", "rel_x_m"), 0, 0, 0, num("rendezvous", "rel_vy_m_s"), 0])
+    dt = num("rendezvous", "cw_dt_s")
+    xf = hill_clohessy_wiltshire(n, dt, x0)
     df = pl.DataFrame(
-        {
-            "maneuver": ["Hohmann burn 1", "Hohmann burn 2", "Braking (CW)"],
-            "delta_v_m_s": [dv1, dv2, dv_braking],
-        }
+        {"maneuver": ["Hohmann burn 1", "Hohmann burn 2", "Braking (CW)"], "delta_v_m_s": [dv1, dv2, dv_braking]}
     )
     mo.vstack(
         mo.md(f"**ΔV phasing total:** {dv1 + dv2 + dv_braking:.1f} m/s"),
         mo.md(f"Estado relativo final: x={xf[0]:.0f} m, y={xf[1]:.0f} m"),
         mo.ui.table(df),
     )
-    return df, n, x0, xf
+    return df, dt, n, x0, xf
 
 
 @app.cell
